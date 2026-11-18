@@ -1,0 +1,13 @@
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+__pycache__/
+.ipynb_checkpoints/
+.env
+*.pbix
+.pbi/
+*.abf
+*.zip
+docs/notebook_preview.html
+tmp/

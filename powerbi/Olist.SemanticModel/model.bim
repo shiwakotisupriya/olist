@@ -1,0 +1,434 @@
+{
+  "name": "Olist",
+  "compatibilityLevel": 1600,
+  "model": {
+    "culture": "en-US",
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "tables": [
+      {
+        "name": "Orders",
+        "columns": [
+          {
+            "name": "order_id",
+            "dataType": "string",
+            "sourceColumn": "order_id",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "purchase_date",
+            "dataType": "dateTime",
+            "sourceColumn": "purchase_date",
+            "summarizeBy": "none",
+            "formatString": "yyyy-MM-dd"
+          },
+          {
+            "name": "month",
+            "dataType": "string",
+            "sourceColumn": "month",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "customer_state",
+            "dataType": "string",
+            "sourceColumn": "customer_state",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "is_delivered",
+            "dataType": "int64",
+            "sourceColumn": "is_delivered",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "delivery_eligible",
+            "dataType": "int64",
+            "sourceColumn": "delivery_eligible",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "is_late",
+            "dataType": "int64",
+            "sourceColumn": "is_late",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "delivery_days",
+            "dataType": "double",
+            "sourceColumn": "delivery_days",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "review_score",
+            "dataType": "int64",
+            "sourceColumn": "review_score",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "review_eligible",
+            "dataType": "int64",
+            "sourceColumn": "review_eligible",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "low_review",
+            "dataType": "int64",
+            "sourceColumn": "low_review",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "delivery_outcome",
+            "dataType": "string",
+            "sourceColumn": "delivery_outcome",
+            "summarizeBy": "none"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Orders",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(\"A:/olist-delivery-analytics/data/processed/order_fact.csv\"), [Delimiter=\",\", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),",
+                "    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),",
+                "    EmptyToNull = Table.ReplaceValue(Headers, \"\", null, Replacer.ReplaceValue, Table.ColumnNames(Headers)),",
+                "    Selected = Table.SelectColumns(EmptyToNull, {\"order_id\", \"purchase_date\", \"month\", \"customer_state\", \"is_delivered\", \"delivery_eligible\", \"is_late\", \"delivery_days\", \"review_score\", \"review_eligible\", \"low_review\", \"delivery_outcome\"}),",
+                "    Typed = Table.TransformColumnTypes(Selected, {{\"order_id\", type text}, {\"purchase_date\", type datetime}, {\"month\", type text}, {\"customer_state\", type text}, {\"is_delivered\", Int64.Type}, {\"delivery_eligible\", Int64.Type}, {\"is_late\", Int64.Type}, {\"delivery_days\", type number}, {\"review_score\", Int64.Type}, {\"review_eligible\", Int64.Type}, {\"low_review\", Int64.Type}, {\"delivery_outcome\", type text}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ],
+        "measures": [
+          {
+            "name": "Delivered Orders",
+            "expression": "COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[is_delivered] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)",
+            "formatString": "#,0",
+            "description": "Distinct delivered orders containing selected items."
+          },
+          {
+            "name": "Merchandise BRL",
+            "expression": "CALCULATE(SUM(Items[price]), Orders[is_delivered] = 1)",
+            "formatString": "\"BRL \"#,0.00",
+            "description": "Item prices in delivered orders; selected category/seller attribution."
+          },
+          {
+            "name": "Freight BRL",
+            "expression": "CALCULATE(SUM(Items[freight_value]), Orders[is_delivered] = 1)",
+            "formatString": "\"BRL \"#,0.00",
+            "description": "Freight separately, delivered orders."
+          },
+          {
+            "name": "AOV BRL",
+            "expression": "DIVIDE([Merchandise BRL], [Delivered Orders])",
+            "formatString": "\"BRL \"#,0.00",
+            "description": "Selected merchandise / distinct delivered orders in that scope."
+          },
+          {
+            "name": "Eligible Orders",
+            "expression": "COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[delivery_eligible] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)",
+            "formatString": "#,0",
+            "description": "Delivered orders with both actual and estimated dates."
+          },
+          {
+            "name": "Late Orders",
+            "expression": "COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[is_late] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)",
+            "formatString": "#,0",
+            "description": "Actual calendar date exceeds promised date."
+          },
+          {
+            "name": "Late Rate",
+            "expression": "DIVIDE([Late Orders], [Eligible Orders])",
+            "formatString": "0.00%",
+            "description": "Late / delivery-eligible orders; eight missing dates excluded overall."
+          },
+          {
+            "name": "Mean Delivery Days",
+            "expression": "CALCULATE(AVERAGE(Orders[delivery_days]), Orders[is_delivered] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id])))",
+            "formatString": "0.00",
+            "description": "Elapsed purchase-to-delivery days; negative/missing durations excluded."
+          },
+          {
+            "name": "Reviewed Orders",
+            "expression": "COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[is_delivered] = 1, Orders[review_eligible] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)",
+            "formatString": "#,0",
+            "description": "One latest selected valid review per delivered order."
+          },
+          {
+            "name": "Low Review Orders",
+            "expression": "COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[is_delivered] = 1, Orders[low_review] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)",
+            "formatString": "#,0",
+            "description": "Selected delivered-order reviews scored 1 or 2."
+          },
+          {
+            "name": "Low Review Rate",
+            "expression": "DIVIDE([Low Review Orders], [Reviewed Orders])",
+            "formatString": "0.00%",
+            "description": "Low reviews / eligible reviewed delivered orders."
+          },
+          {
+            "name": "Mean Review",
+            "expression": "CALCULATE(AVERAGE(Orders[review_score]), Orders[is_delivered] = 1, Orders[review_eligible] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id])))",
+            "formatString": "0.00",
+            "description": "Mean selected review among delivered orders."
+          },
+          {
+            "name": "Review Coverage",
+            "expression": "DIVIDE([Reviewed Orders], [Delivered Orders])",
+            "formatString": "0.00%",
+            "description": "Reviewed delivered orders / delivered orders."
+          },
+          {
+            "name": "Qualified Late Rate",
+            "expression": "IF([Eligible Orders] >= 100, [Late Rate])",
+            "formatString": "0.00%",
+            "description": "Suppressed below 100 eligible orders within current filters."
+          },
+          {
+            "name": "Qualified Eligible Orders",
+            "expression": "IF([Eligible Orders] >= 100, [Eligible Orders])",
+            "formatString": "#,0",
+            "description": "Only groups with at least 100 eligible orders."
+          },
+          {
+            "name": "Qualified Late Orders",
+            "expression": "IF([Eligible Orders] >= 100, [Late Orders])",
+            "formatString": "#,0",
+            "description": "Only groups with at least 100 eligible orders."
+          }
+        ]
+      },
+      {
+        "name": "Items",
+        "columns": [
+          {
+            "name": "order_id",
+            "dataType": "string",
+            "sourceColumn": "order_id",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "seller_id",
+            "dataType": "string",
+            "sourceColumn": "seller_id",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "category_key",
+            "dataType": "string",
+            "sourceColumn": "category_key",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "price",
+            "dataType": "double",
+            "sourceColumn": "price",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "freight_value",
+            "dataType": "double",
+            "sourceColumn": "freight_value",
+            "summarizeBy": "none"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Items",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(\"A:/olist-delivery-analytics/data/processed/report_items.csv\"), [Delimiter=\",\", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),",
+                "    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),",
+                "    EmptyToNull = Table.ReplaceValue(Headers, \"\", null, Replacer.ReplaceValue, Table.ColumnNames(Headers)),",
+                "    Selected = Table.SelectColumns(EmptyToNull, {\"order_id\", \"seller_id\", \"category_key\", \"price\", \"freight_value\"}),",
+                "    Typed = Table.TransformColumnTypes(Selected, {{\"order_id\", type text}, {\"seller_id\", type text}, {\"category_key\", type text}, {\"price\", type number}, {\"freight_value\", type number}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Calendar",
+        "columns": [
+          {
+            "name": "Date",
+            "dataType": "dateTime",
+            "sourceColumn": "Date",
+            "summarizeBy": "none",
+            "formatString": "yyyy-MM-dd"
+          },
+          {
+            "name": "Year",
+            "dataType": "int64",
+            "sourceColumn": "Year",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Month",
+            "dataType": "string",
+            "sourceColumn": "Month",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "MonthNumber",
+            "dataType": "int64",
+            "sourceColumn": "MonthNumber",
+            "summarizeBy": "none"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Calendar",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(\"A:/olist-delivery-analytics/data/processed/dim_date.csv\"), [Delimiter=\",\", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),",
+                "    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),",
+                "    EmptyToNull = Table.ReplaceValue(Headers, \"\", null, Replacer.ReplaceValue, Table.ColumnNames(Headers)),",
+                "    Selected = Table.SelectColumns(EmptyToNull, {\"Date\", \"Year\", \"Month\", \"MonthNumber\"}),",
+                "    Typed = Table.TransformColumnTypes(Selected, {{\"Date\", type datetime}, {\"Year\", Int64.Type}, {\"Month\", type text}, {\"MonthNumber\", Int64.Type}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Categories",
+        "columns": [
+          {
+            "name": "category_key",
+            "dataType": "string",
+            "sourceColumn": "category_key",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "category_label",
+            "dataType": "string",
+            "sourceColumn": "category_label",
+            "summarizeBy": "none"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Categories",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(\"A:/olist-delivery-analytics/data/processed/dim_category.csv\"), [Delimiter=\",\", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),",
+                "    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),",
+                "    EmptyToNull = Table.ReplaceValue(Headers, \"\", null, Replacer.ReplaceValue, Table.ColumnNames(Headers)),",
+                "    Selected = Table.SelectColumns(EmptyToNull, {\"category_key\", \"category_label\"}),",
+                "    Typed = Table.TransformColumnTypes(Selected, {{\"category_key\", type text}, {\"category_label\", type text}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "Sellers",
+        "columns": [
+          {
+            "name": "seller_id",
+            "dataType": "string",
+            "sourceColumn": "seller_id",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "seller_state",
+            "dataType": "string",
+            "sourceColumn": "seller_state",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "seller_label",
+            "dataType": "string",
+            "sourceColumn": "seller_label",
+            "summarizeBy": "none"
+          }
+        ],
+        "partitions": [
+          {
+            "name": "Sellers",
+            "mode": "import",
+            "source": {
+              "type": "m",
+              "expression": [
+                "let",
+                "    Source = Csv.Document(File.Contents(\"A:/olist-delivery-analytics/data/processed/dim_seller.csv\"), [Delimiter=\",\", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),",
+                "    Headers = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),",
+                "    EmptyToNull = Table.ReplaceValue(Headers, \"\", null, Replacer.ReplaceValue, Table.ColumnNames(Headers)),",
+                "    Selected = Table.SelectColumns(EmptyToNull, {\"seller_id\", \"seller_state\", \"seller_label\"}),",
+                "    Typed = Table.TransformColumnTypes(Selected, {{\"seller_id\", type text}, {\"seller_state\", type text}, {\"seller_label\", type text}}, \"en-US\")",
+                "in",
+                "    Typed"
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "name": "19963191-4e9d-56e5-9d1d-15d80d0cccbc",
+        "fromTable": "Items",
+        "fromColumn": "order_id",
+        "toTable": "Orders",
+        "toColumn": "order_id",
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "0ecd892d-f18f-5c91-a7ae-579984abbc51",
+        "fromTable": "Orders",
+        "fromColumn": "purchase_date",
+        "toTable": "Calendar",
+        "toColumn": "Date",
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "3841996b-5df4-5626-afc9-a4f5e7fc8e43",
+        "fromTable": "Items",
+        "fromColumn": "category_key",
+        "toTable": "Categories",
+        "toColumn": "category_key",
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection"
+      },
+      {
+        "name": "dcda178e-c5d6-516e-b97a-261105c77da7",
+        "fromTable": "Items",
+        "fromColumn": "seller_id",
+        "toTable": "Sellers",
+        "toColumn": "seller_id",
+        "fromCardinality": "many",
+        "toCardinality": "one",
+        "crossFilteringBehavior": "oneDirection"
+      }
+    ],
+    "annotations": [
+      {
+        "name": "PBI_QueryOrder",
+        "value": "[\"Orders\", \"Items\", \"Calendar\", \"Categories\", \"Sellers\"]"
+      }
+    ]
+  }
+}

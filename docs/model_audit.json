@@ -1,0 +1,57 @@
+{
+  "prediction_point": "Order approval",
+  "features": [
+    "merchandise_value",
+    "freight_value",
+    "item_count",
+    "seller_count",
+    "total_weight_g",
+    "max_length_cm",
+    "max_height_cm",
+    "max_width_cm",
+    "promised_days",
+    "approval_hour",
+    "approval_weekday",
+    "same_state",
+    "customer_state",
+    "seller_state",
+    "category_key"
+  ],
+  "selected_model": "Logistic regression",
+  "selection_rule": "Highest validation average precision; test untouched until evaluation",
+  "splits": {
+    "train": {
+      "orders": 41183,
+      "late": 1765,
+      "late_rate": 0.04285748974091251,
+      "first_approval": "2016-09-15 12:16:38",
+      "last_approval": "2017-12-28 12:31:55"
+    },
+    "validation": {
+      "orders": 38622,
+      "late": 3389,
+      "late_rate": 0.08774791569571747,
+      "first_approval": "2018-01-01 02:30:25",
+      "last_approval": "2018-06-29 12:31:27"
+    },
+    "test": {
+      "orders": 12545,
+      "late": 599,
+      "late_rate": 0.047748106815464327,
+      "first_approval": "2018-07-01 00:10:10",
+      "last_approval": "2018-08-29 15:10:26"
+    }
+  },
+  "excluded_noneligible_missing_approval_or_negative_promise": 2991,
+  "train_labels_unavailable_at_validation_start": 2439,
+  "validation_labels_unavailable_at_test_start": 1661,
+  "assumptions": [
+    "Item prices, freight and product/seller attributes represent their approval-time values; this snapshot has no change history.",
+    "Only delivered orders with observable outcomes are modelled; results do not cover cancellations or unresolved shipments.",
+    "Latest test cohorts may have unequal outcome observation; no claim of live deployment performance.",
+    "10% validation investigation fraction is a case-study staffing assumption; test volume may differ at the frozen threshold.",
+    "Numeric missingness and unknown categories handled by training-fitted preprocessing; no future seller performance aggregates.",
+    "First item determines representative seller state/category for multi-item orders; this is a lossy simplification.",
+    "PR-AUC is reported as sklearn average precision, not trapezoidal integration."
+  ]
+}

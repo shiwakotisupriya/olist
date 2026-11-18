@@ -1,0 +1,47 @@
+-- Distinct delivered orders containing selected items.
+Delivered Orders = COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[is_delivered] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)
+
+-- Item prices in delivered orders; selected category/seller attribution.
+Merchandise BRL = CALCULATE(SUM(Items[price]), Orders[is_delivered] = 1)
+
+-- Freight separately, delivered orders.
+Freight BRL = CALCULATE(SUM(Items[freight_value]), Orders[is_delivered] = 1)
+
+-- Selected merchandise / distinct delivered orders in that scope.
+AOV BRL = DIVIDE([Merchandise BRL], [Delivered Orders])
+
+-- Delivered orders with both actual and estimated dates.
+Eligible Orders = COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[delivery_eligible] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)
+
+-- Actual calendar date exceeds promised date.
+Late Orders = COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[is_late] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)
+
+-- Late / delivery-eligible orders; eight missing dates excluded overall.
+Late Rate = DIVIDE([Late Orders], [Eligible Orders])
+
+-- Elapsed purchase-to-delivery days; negative/missing durations excluded.
+Mean Delivery Days = CALCULATE(AVERAGE(Orders[delivery_days]), Orders[is_delivered] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id])))
+
+-- One latest selected valid review per delivered order.
+Reviewed Orders = COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[is_delivered] = 1, Orders[review_eligible] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)
+
+-- Selected delivered-order reviews scored 1 or 2.
+Low Review Orders = COALESCE(CALCULATE(DISTINCTCOUNT(Orders[order_id]), Orders[is_delivered] = 1, Orders[low_review] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id]))), 0)
+
+-- Low reviews / eligible reviewed delivered orders.
+Low Review Rate = DIVIDE([Low Review Orders], [Reviewed Orders])
+
+-- Mean selected review among delivered orders.
+Mean Review = CALCULATE(AVERAGE(Orders[review_score]), Orders[is_delivered] = 1, Orders[review_eligible] = 1, KEEPFILTERS(TREATAS(VALUES(Items[order_id]), Orders[order_id])))
+
+-- Reviewed delivered orders / delivered orders.
+Review Coverage = DIVIDE([Reviewed Orders], [Delivered Orders])
+
+-- Suppressed below 100 eligible orders within current filters.
+Qualified Late Rate = IF([Eligible Orders] >= 100, [Late Rate])
+
+-- Only groups with at least 100 eligible orders.
+Qualified Eligible Orders = IF([Eligible Orders] >= 100, [Eligible Orders])
+
+-- Only groups with at least 100 eligible orders.
+Qualified Late Orders = IF([Eligible Orders] >= 100, [Late Orders])

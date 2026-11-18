@@ -1,0 +1,25 @@
+{
+  "audio_january_2018": {
+    "eligible": 25,
+    "late": 0,
+    "selected_item_merchandise_brl": 3820.28
+  },
+  "calendar_spine": "26 consecutive months; growth after zero denominator is blank",
+  "notebook": {
+    "executed_code_cells": 5,
+    "errors": 0,
+    "inline_figure": true
+  },
+  "local_markdown_links": "All checked destinations exist",
+  "powerbi": {
+    "microsoft_schema_validated_files": 40,
+    "pages": 3,
+    "visuals": 32,
+    "desktop_refresh_verified": false
+  },
+  "limitations": [
+    "Power BI Desktop refresh, DAX and interactions are unverified.",
+    "Revised monthly SQL calendar spine was not rerun in MySQL.",
+    "No video recording or remote GitHub publication was performed."
+  ]
+}
